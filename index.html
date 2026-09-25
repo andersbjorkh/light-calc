@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Calculator</title>
+<style>
+  :root {
+    --bg: #eef0f3;
+    --panel: #ffffff;
+    --key: #f4f5f7;
+    --key-fn: #e4e7ec;
+    --key-op: #dfe6f5;
+    --text: #1b1f27;
+    --muted: #6b7280;
+    --accent: #e8590c;
+    --accent-text: #fff;
+    --err: #c92a2a;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101216;
+      --panel: #181b21;
+      --key: #22262e;
+      --key-fn: #2b3039;
+      --key-op: #26324a;
+      --text: #eceef2;
+      --muted: #8b93a1;
+      --accent: #ff7a2e;
+      --accent-text: #1a0d05;
+      --err: #ff6b6b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .calc {
+    width: min(100vw, 380px);
+    padding: 16px;
+    background: var(--panel);
+    border-radius: 22px;
+    box-shadow: 0 10px 40px rgb(0 0 0 / .12);
+  }
+  .display {
+    padding: 8px 6px 14px;
+    text-align: right;
+  }
+  .display .mode {
+    font-size: 12px;
+    letter-spacing: .08em;
+    color: var(--muted);
+    text-align: left;
+    min-height: 1.2em;
+  }
+  #expr {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text);
+    font: 500 26px/1.3 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    text-align: right;
+    caret-color: var(--accent);
+  }
+  #result {
+    min-height: 1.4em;
+    font: 600 34px/1.3 system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+    color: var(--muted);
+  }
+  #result.final { color: var(--text); }
+  #result.error { color: var(--err); font-size: 22px; }
+
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .keys button {
+    height: 52px;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--key);
+    color: var(--text);
+    font: 500 19px system-ui, sans-serif;
+    cursor: pointer;
+    transition: filter .1s, transform .05s;
+  }
+  .keys button:hover { filter: brightness(.96); }
+  @media (prefers-color-scheme: dark) { .keys button:hover { filter: brightness(1.15); } }
+  .keys button:active { transform: scale(.96); }
+  .keys button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .keys .fn { background: var(--key-fn); font-size: 16px; }
+  .keys .op { background: var(--key-op); font-size: 22px; }
+  .keys .eq { background: var(--accent); color: var(--accent-text); font-size: 24px; }
+  .keys .on { background: var(--accent); color: var(--accent-text); }
+
+  .history {
+    margin-top: 14px;
+    border-top: 1px solid var(--key-fn);
+    padding-top: 8px;
+  }
+  .history header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: .08em;
+  }
+  .history header button {
+    border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 12px;
+  }
+  #history {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  #history li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    font: 14px ui-monospace, Menlo, Consolas, monospace;
+  }
+  #history li:hover { background: var(--key); }
+  #history .h-expr { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #history .h-res { font-weight: 600; white-space: nowrap; }
+  #history:empty::after { content: "No calculations yet"; color: var(--muted); font-size: 13px; padding: 4px 6px; display: block; }
+</style>
+</head>
+<body>
+<main class="calc">
+  <div class="display">
+    <div class="mode" id="mode">DEG</div>
+    <input id="expr" aria-label="Expression" autocomplete="off" spellcheck="false" autofocus>
+    <div id="result" aria-live="polite"></div>
+  </div>
+
+  <div class="keys">
+    <button class="fn" data-action="second">2nd</button>
+    <button class="fn" data-action="angle" id="angle">DEG</button>
+    <button class="fn" data-insert="(">(</button>
+    <button class="fn" data-insert=")">)</button>
+    <button class="fn" data-action="clear">AC</button>
+
+    <button class="fn trig" data-fn="sin">sin</button>
+    <button class="fn trig" data-fn="cos">cos</button>
+    <button class="fn trig" data-fn="tan">tan</button>
+    <button class="fn" data-insert="^">xʸ</button>
+    <button class="fn" data-action="back" aria-label="Backspace">⌫</button>
+
+    <button class="fn" data-insert="ln(">ln</button>
+    <button class="fn" data-insert="log(">log</button>
+    <button class="fn" data-insert="√(">√</button>
+    <button class="fn" data-insert="^2">x²</button>
+    <button class="op" data-insert="÷">÷</button>
+
+    <button class="fn" data-insert="π">π</button>
+    <button data-insert="7">7</button>
+    <button data-insert="8">8</button>
+    <button data-insert="9">9</button>
+    <button class="op" data-insert="×">×</button>
+
+    <button class="fn" data-insert="e">e</button>
+    <button data-insert="4">4</button>
+    <button data-insert="5">5</button>
+    <button data-insert="6">6</button>
+    <button class="op" data-insert="−">−</button>
+
+    <button class="fn" data-insert="!">x!</button>
+    <button data-insert="1">1</button>
+    <button data-insert="2">2</button>
+    <button data-insert="3">3</button>
+    <button class="op" data-insert="+">+</button>
+
+    <button class="fn" data-insert="%">%</button>
+    <button class="fn" data-insert="Ans">Ans</button>
+    <button data-insert="0">0</button>
+    <button data-insert=".">.</button>
+    <button class="eq" data-action="equals">=</button>
+  </div>
+
+  <section class="history">
+    <header><span>HISTORY</span><button data-action="clear-history">Clear</button></header>
+    <ul id="history"></ul>
+  </section>
+</main>
+
+<script src="calc.js"></script>
+<script>
+  const { evaluate, format } = Calc;
+  const $ = (id) => document.getElementById(id);
+  const exprEl = $('expr');
+  const resultEl = $('result');
+  const historyEl = $('history');
+
+  const store = {
+    get(key, fallback) {
+      try { return JSON.parse(localStorage.getItem('calc.' + key)) ?? fallback; } catch { return fallback; }
+    },
+    set(key, value) {
+      try { localStorage.setItem('calc.' + key, JSON.stringify(value)); } catch {}
+    },
+  };
+
+  let angle = store.get('angle', 'deg');
+  let ans = store.get('ans', 0);
+  let history = store.get('history', []);
+  let second = false;
+  let justEvaluated = false;
+
+  // Operators continue from a just-computed result; anything else starts fresh.
+  const CONTINUES = /^[+\-−*×/÷^!%)]/;
+
+  function showResult(text, cls = '') {
+    resultEl.textContent = text;
+    resultEl.className = cls;
+  }
+
+  function preview() {
+    const src = exprEl.value.trim();
+    if (!src) return showResult('');
+    try {
+      showResult(format(evaluate(src, { angle, ans })));
+    } catch {
+      showResult('');
+    }
+  }
+
+  function insert(text) {
+    if (justEvaluated) {
+      if (!CONTINUES.test(text)) exprEl.value = '';
+      exprEl.setSelectionRange(exprEl.value.length, exprEl.value.length);
+      justEvaluated = false;
+    }
+    exprEl.setRangeText(text, exprEl.selectionStart, exprEl.selectionEnd, 'end');
+    exprEl.focus();
+    preview();
+  }
+
+  function equals() {
+    const src = exprEl.value.trim();
+    if (!src) return;
+    try {
+      const value = evaluate(src, { angle, ans });
+      const out = format(value);
+      ans = value;
+      store.set('ans', ans);
+      const open = (src.match(/\(/g) || []).length - (src.match(/\)/g) || []).length;
+      history = [{ expr: src + ')'.repeat(open), result: out }, ...history].slice(0, 10);
+      store.set('history', history);
+      renderHistory();
+      exprEl.value = out;
+      showResult(out, 'final');
+      justEvaluated = true;
+      exprEl.select();
+    } catch (err) {
+      showResult(err instanceof Calc.CalcError ? err.message : 'Error', 'error');
+    }
+  }
+
+  function backspace() {
+    justEvaluated = false;
+    const { selectionStart: s, selectionEnd: e } = exprEl;
+    if (s !== e) exprEl.setRangeText('', s, e, 'end');
+    else if (s > 0) exprEl.setRangeText('', s - 1, s, 'end');
+    preview();
+  }
+
+  function clearAll() {
+    exprEl.value = '';
+    justEvaluated = false;
+    showResult('');
+  }
+
+  function renderAngle() {
+    $('angle').textContent = angle.toUpperCase();
+    $('mode').textContent = angle.toUpperCase() + (second ? ' · 2nd' : '');
+  }
+
+  function renderSecond() {
+    for (const btn of document.querySelectorAll('.trig')) {
+      btn.textContent = second ? btn.dataset.fn + '⁻¹' : btn.dataset.fn;
+      btn.dataset.insert = (second ? 'a' : '') + btn.dataset.fn + '(';
+    }
+    document.querySelector('[data-action="second"]').classList.toggle('on', second);
+    renderAngle();
+  }
+
+  function renderHistory() {
+    historyEl.replaceChildren(...history.map(({ expr, result }) => {
+      const li = document.createElement('li');
+      li.title = 'Insert ' + result;
+      const e = document.createElement('span');
+      e.className = 'h-expr';
+      e.textContent = expr + ' =';
+      const r = document.createElement('span');
+      r.className = 'h-res';
+      r.textContent = result;
+      li.append(e, r);
+      li.addEventListener('click', () => insert(result));
+      return li;
+    }));
+  }
+
+  document.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.insert) return insert(btn.dataset.insert);
+    switch (btn.dataset.action) {
+      case 'equals': equals(); break;
+      case 'clear': clearAll(); break;
+      case 'back': backspace(); break;
+      case 'second': second = !second; renderSecond(); break;
+      case 'angle':
+        angle = angle === 'deg' ? 'rad' : 'deg';
+        store.set('angle', angle);
+        renderAngle();
+        preview();
+        break;
+      case 'clear-history': history = []; store.set('history', history); renderHistory(); break;
+    }
+    exprEl.focus();
+  });
+
+  // Keep keyboard focus on the expression field so typing always works.
+  document.addEventListener('mousedown', (ev) => {
+    if (ev.target.closest('button, li')) ev.preventDefault();
+  });
+
+  exprEl.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' || ev.key === '=') { ev.preventDefault(); equals(); return; }
+    if (ev.key === 'Escape') { ev.preventDefault(); clearAll(); return; }
+    if (justEvaluated && ev.key.length === 1 && CONTINUES.test(ev.key)) {
+      // Append the operator after the result instead of replacing the selection.
+      exprEl.setSelectionRange(exprEl.value.length, exprEl.value.length);
+    }
+  });
+
+  exprEl.addEventListener('input', () => { justEvaluated = false; preview(); });
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.target !== exprEl && ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey) exprEl.focus();
+  });
+
+  renderSecond();
+  renderHistory();
+  exprEl.focus();
+</script>
+</body>
+</html>
