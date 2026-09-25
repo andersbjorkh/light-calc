@@ -15,7 +15,8 @@ python3 -m http.server 8080   # then visit http://<host>:8080
   `sin cos tan asin acos atan ln log sqrt/√ abs`, and implicit multiplication (`2π`, `3(4+1)`).
 - `%` is percent (`200*15%` = 30), or modulo when an operand follows it (`7%3` = 1).
 - **2nd** switches the trig keys to their inverses. **DEG/RAD** sets the angle unit.
-- History (last 10), `Ans`, and the angle mode persist in `localStorage`.
+- The **AUTO/LIGHT/DARK** button (top right) sets the theme. `AUTO` follows the system setting.
+- History (last 10), `Ans`, the angle mode, and the theme persist in `localStorage`.
 
 ## Files
 
