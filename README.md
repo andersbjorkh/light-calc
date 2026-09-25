@@ -11,6 +11,7 @@ python3 -m http.server 8080   # then visit http://<host>:8080
 ```
 
 - **Keyboard:** type expressions directly. `Enter` or `=` evaluates, `Esc` clears, and `Backspace` deletes.
+- **Touch:** the on-screen keyboard stays hidden, so input comes from the keypad. A hardware keyboard still works.
 - **Syntax:** `+ - * / ^ ! %`, `mod`, parentheses (auto-closed), `π`/`pi`, `e`, `Ans`,
   `sin cos tan asin acos atan ln log sqrt/√ abs`, and implicit multiplication (`2π`, `3(4+1)`).
 - `%` is percent (`200*15%` = 30), or modulo when an operand follows it (`7%3` = 1).
